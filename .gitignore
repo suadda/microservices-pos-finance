@@ -15,3 +15,18 @@ frontend/dist/
 .idea/
 .vscode/
 .DS_Store
+
+# AI coding agents (local config, memory and generated artifacts)
+.kiro/
+.claude/
+.cursor/
+.codex/
+.windsurf/
+.continue/
+.aider*
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+graphify-out/
+design-system/
+plans/
