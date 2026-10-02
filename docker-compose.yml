@@ -1,9 +1,12 @@
-# Whole stack with one command:  cp .env.example .env  (fill secrets)  &&  docker compose up -d --build
+# Whole stack with one command:  docker compose up -d --build
 #   http://localhost:8080          SPA + API gateway (/api/auth, /api/pos, /api/finance)
 #   http://localhost:8001/8002/8003 direct service ports (for testing /internal/* with X-Service-Key)
 #
-# No secrets live in this file. Every secret is read from the gitignored root .env; `${VAR:?...}` makes
-# compose refuse to start when one is missing instead of silently falling back to a public default.
+# No secrets live in this repo. `secrets-init` runs first and generates every secret (APP_KEYs, JWT secret,
+# service key, MySQL passwords) into the `secrets` volume, which the other containers mount read-only as
+# /run/secrets. To pin your own values, set them in a gitignored .env (see .env.example).
+
+x-secrets-mount: &secrets-mount secrets:/run/secrets:ro
 
 x-service-env: &service-env
   APP_ENV: production
@@ -17,69 +20,100 @@ x-service-env: &service-env
   AUTH_SERVICE_URL: http://auth-service:8000
   POS_SERVICE_URL: http://pos-service:8000
   FINANCE_SERVICE_URL: http://finance-service:8000
-  INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env}
+  INTERNAL_API_KEY_FILE: /run/secrets/internal_api_key
 
 x-mysql: &mysql
   image: mysql:8.4
   restart: unless-stopped
   command: ["--default-time-zone=+07:00", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
   healthcheck:
-    test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+    test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$(cat $$MYSQL_ROOT_PASSWORD_FILE)\" --silent"]
     interval: 5s
     timeout: 5s
     retries: 30
     start_period: 20s
 
 services:
+  # ---------- secrets (runs once, then exits) ----------
+  secrets-init:
+    image: alpine:3.20
+    restart: "no"
+    command: ["sh", "/init-secrets.sh"]
+    environment:
+      # Optional overrides from .env; empty means "generate once and keep".
+      APP_KEY_AUTH: ${APP_KEY_AUTH:-}
+      APP_KEY_POS: ${APP_KEY_POS:-}
+      APP_KEY_FINANCE: ${APP_KEY_FINANCE:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
+      DB_AUTH_ROOT_PASSWORD: ${DB_AUTH_ROOT_PASSWORD:-}
+      DB_AUTH_PASSWORD: ${DB_AUTH_PASSWORD:-}
+      DB_POS_ROOT_PASSWORD: ${DB_POS_ROOT_PASSWORD:-}
+      DB_POS_PASSWORD: ${DB_POS_PASSWORD:-}
+      DB_FINANCE_ROOT_PASSWORD: ${DB_FINANCE_ROOT_PASSWORD:-}
+      DB_FINANCE_PASSWORD: ${DB_FINANCE_PASSWORD:-}
+    volumes:
+      - ./scripts/init-secrets.sh:/init-secrets.sh:ro
+      - secrets:/secrets
+
   # ---------- databases (one isolated MySQL per service) ----------
   db_auth:
     <<: *mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_AUTH_ROOT_PASSWORD:?set DB_AUTH_ROOT_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_auth_root_password
       MYSQL_DATABASE: db_auth
       MYSQL_USER: auth
-      MYSQL_PASSWORD: ${DB_AUTH_PASSWORD:?set DB_AUTH_PASSWORD in .env}
-    volumes: [db_auth:/var/lib/mysql]
+      MYSQL_PASSWORD_FILE: /run/secrets/db_auth_password
+    volumes: [db_auth:/var/lib/mysql, *secrets-mount]
+    depends_on:
+      secrets-init: { condition: service_completed_successfully }
 
   db_pos:
     <<: *mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_POS_ROOT_PASSWORD:?set DB_POS_ROOT_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_pos_root_password
       MYSQL_DATABASE: db_pos
       MYSQL_USER: pos
-      MYSQL_PASSWORD: ${DB_POS_PASSWORD:?set DB_POS_PASSWORD in .env}
-    volumes: [db_pos:/var/lib/mysql]
+      MYSQL_PASSWORD_FILE: /run/secrets/db_pos_password
+    volumes: [db_pos:/var/lib/mysql, *secrets-mount]
+    depends_on:
+      secrets-init: { condition: service_completed_successfully }
 
   db_finance:
     <<: *mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_FINANCE_ROOT_PASSWORD:?set DB_FINANCE_ROOT_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_finance_root_password
       MYSQL_DATABASE: db_finance
       MYSQL_USER: finance
-      MYSQL_PASSWORD: ${DB_FINANCE_PASSWORD:?set DB_FINANCE_PASSWORD in .env}
-    volumes: [db_finance:/var/lib/mysql]
+      MYSQL_PASSWORD_FILE: /run/secrets/db_finance_password
+    volumes: [db_finance:/var/lib/mysql, *secrets-mount]
+    depends_on:
+      secrets-init: { condition: service_completed_successfully }
 
   # ---------- backend services (Laravel 13 on FrankenPHP) ----------
+  # docker/entrypoint.sh exports every *_FILE variable below as the plain variable before Laravel boots.
   auth-service:
     build: ./services/auth
     restart: unless-stopped
     environment:
       <<: *service-env
       APP_NAME: auth-service
-      APP_KEY: ${APP_KEY_AUTH:?set APP_KEY_AUTH in .env}
+      APP_KEY_FILE: /run/secrets/app_key_auth
       DB_HOST: db_auth
       DB_DATABASE: db_auth
       DB_USERNAME: auth
-      DB_PASSWORD: ${DB_AUTH_PASSWORD:?set DB_AUTH_PASSWORD in .env}
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
-      # First superadmin, created once if the email does not exist yet. Leave empty to skip.
+      DB_PASSWORD_FILE: /run/secrets/db_auth_password
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      JWT_ACCESS_TTL: "900"
+      JWT_REFRESH_TTL: "604800"
+      # Test accounts (*@demo.test, see README). Set SEED_DEMO_USERS=false in .env on any public deployment;
+      # existing demo accounts are then deactivated on the next start.
+      SEED_DEMO_USERS: ${SEED_DEMO_USERS:-true}
+      # Optional own superadmin, created once if the email does not exist yet.
       ADMIN_NAME: ${ADMIN_NAME:-Super Admin}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
-      # Shared-password demo accounts (*@demo.test). Never enable on a reachable deployment.
-      SEED_DEMO_USERS: ${SEED_DEMO_USERS:-false}
-      JWT_ACCESS_TTL: "900"
-      JWT_REFRESH_TTL: "604800"
+    volumes: [*secrets-mount]
     depends_on:
       db_auth: { condition: service_healthy }
     ports: ["8001:8000"]
@@ -96,12 +130,13 @@ services:
     environment:
       <<: *service-env
       APP_NAME: pos-service
-      APP_KEY: ${APP_KEY_POS:?set APP_KEY_POS in .env}
+      APP_KEY_FILE: /run/secrets/app_key_pos
       DB_HOST: db_pos
       DB_DATABASE: db_pos
       DB_USERNAME: pos
-      DB_PASSWORD: ${DB_POS_PASSWORD:?set DB_POS_PASSWORD in .env}
+      DB_PASSWORD_FILE: /run/secrets/db_pos_password
       TAX_RATE: ${TAX_RATE:-0.11}
+    volumes: [*secrets-mount]
     depends_on:
       db_pos: { condition: service_healthy }
       auth-service: { condition: service_healthy }
@@ -114,11 +149,12 @@ services:
     environment:
       <<: *service-env
       APP_NAME: finance-service
-      APP_KEY: ${APP_KEY_FINANCE:?set APP_KEY_FINANCE in .env}
+      APP_KEY_FILE: /run/secrets/app_key_finance
       DB_HOST: db_finance
       DB_DATABASE: db_finance
       DB_USERNAME: finance
-      DB_PASSWORD: ${DB_FINANCE_PASSWORD:?set DB_FINANCE_PASSWORD in .env}
+      DB_PASSWORD_FILE: /run/secrets/db_finance_password
+    volumes: [*secrets-mount]
     depends_on:
       db_finance: { condition: service_healthy }
       auth-service: { condition: service_healthy }
@@ -148,3 +184,4 @@ volumes:
   db_auth:
   db_pos:
   db_finance:
+  secrets:
