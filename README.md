@@ -4,17 +4,18 @@ Dua sistem yang terintegrasi: **POS** (shift kasir, transaksi, pembayaran, void)
 double-entry, rekonsiliasi End of Day). Semua service dibangun dengan **Laravel 13 (PHP 8.4)**, frontend satu SPA **React 19 + Vite**,
 database **MySQL 8.4** terpisah per service, dan **Nginx** sebagai API Gateway.
 
-> Repo ini adalah versi Laravel dari implementasi awal berbasis Go
-> ([suadda/pos-finance-microservices](https://github.com/suadda/pos-finance-microservices)). Perbandingan keduanya ada di
-> [Go vs Laravel](#go-vs-laravel--apa-yang-berbeda).
 
 ## Menjalankan
 
 Kebutuhan: Docker + Docker Compose v2.
 
 ```bash
+cp .env.example .env                # isi SEMUA secret (cara generate ada di dalam file)
 docker compose up -d --build        # seluruh stack: 3 service + 3 MySQL + frontend + gateway
 ```
+
+Tidak ada secret di repo. `docker-compose.yml` membaca `APP_KEY_*`, `JWT_SECRET`, `INTERNAL_API_KEY` dan password MySQL
+dari `.env` (di-gitignore); compose langsung berhenti dengan error bila ada yang kosong. Jangan pernah commit `.env`.
 
 Buka **http://localhost:8080** (SPA + API). Saat container start, migrasi dan seeder dijalankan otomatis (idempoten).
 Port langsung ke service (untuk uji `/internal/*` dengan service key): `8001` auth, `8002` pos, `8003` finance.
@@ -22,15 +23,14 @@ Port gateway bisa diganti: `GATEWAY_PORT=9090 docker compose up -d`.
 
 Reset data: `docker compose down -v && docker compose up -d --build`.
 
-### Akun demo (password semua: `password123`)
+### Akun
 
-| Role | Email | Outlet |
-|---|---|---|
-| superadmin | `superadmin@demo.test` | semua |
-| staff_finance | `staff.finance@demo.test` | semua |
-| manager_finance | `manager.finance@demo.test` | semua |
-| kasir | `kasir.bdg@demo.test`, `kasir.grt@demo.test`, `kasir.skb@demo.test`, `kasir.tsm@demo.test` | BDG / GRT / SKB / TSM |
-| supervisor_pos | `supervisor.bdg@demo.test`, `supervisor.grt@demo.test`, `supervisor.skb@demo.test`, `supervisor.tsm@demo.test` | BDG / GRT / SKB / TSM |
+Superadmin pertama dibuat dari `ADMIN_EMAIL` + `ADMIN_PASSWORD` (min. 12 karakter) di `.env`, hanya bila email itu belum
+ada. Setelah login pertama, ganti password lewat UI dan hapus `ADMIN_PASSWORD` dari `.env`. User lain dibuat dari menu Users.
+
+Akun demo `*@demo.test` (satu per role dan outlet, password bersama) **tidak** dibuat secara default. Untuk pengujian
+lokal saja, set `SEED_DEMO_USERS=true` di `.env` (dibutuhkan oleh `scripts/e2e-scenarios.sh`). Saat flag kembali
+`false`, akun demo yang sudah ada otomatis dinonaktifkan pada start berikutnya. Jangan aktifkan di server yang bisa diakses orang lain.
 
 Seeder produk: `PKT-100K` (100.000), `PKT-50K` (50.000), `PKT-200K` (200.000) untuk skenario S1, beberapa produk lain,
 dan `OLD-001` (nonaktif). Outlet: `1 BDG`, `2 GRT`, `3 SKB`, `4 TSM`. Karena rekonsiliasi bersifat satu baris per outlet per hari,
@@ -39,7 +39,7 @@ tersedia 4 outlet supaya S1, S2, S3, S5 bisa diuji di hari yang sama.
 ### Uji skenario otomatis (S1–S5)
 
 ```bash
-./scripts/e2e-scenarios.sh      # butuh curl + jq, jalankan pada database baru
+./scripts/e2e-scenarios.sh      # butuh curl + jq, SEED_DEMO_USERS=true, jalankan pada database baru
 ```
 
 Script ini menjalankan S1 (BDG), S2 (GRT — mematikan container Finance lewat `docker compose stop finance-service`),
