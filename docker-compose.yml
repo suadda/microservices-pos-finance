@@ -1,6 +1,9 @@
-# Whole stack with one command:  docker compose up -d --build
+# Whole stack with one command:  cp .env.example .env  (fill secrets)  &&  docker compose up -d --build
 #   http://localhost:8080          SPA + API gateway (/api/auth, /api/pos, /api/finance)
 #   http://localhost:8001/8002/8003 direct service ports (for testing /internal/* with X-Service-Key)
+#
+# No secrets live in this file. Every secret is read from the gitignored root .env; `${VAR:?...}` makes
+# compose refuse to start when one is missing instead of silently falling back to a public default.
 
 x-service-env: &service-env
   APP_ENV: production
@@ -14,7 +17,7 @@ x-service-env: &service-env
   AUTH_SERVICE_URL: http://auth-service:8000
   POS_SERVICE_URL: http://pos-service:8000
   FINANCE_SERVICE_URL: http://finance-service:8000
-  INTERNAL_API_KEY: ${INTERNAL_API_KEY:-change-me-internal-service-key}
+  INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env}
 
 x-mysql: &mysql
   image: mysql:8.4
@@ -32,28 +35,28 @@ services:
   db_auth:
     <<: *mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root_auth
+      MYSQL_ROOT_PASSWORD: ${DB_AUTH_ROOT_PASSWORD:?set DB_AUTH_ROOT_PASSWORD in .env}
       MYSQL_DATABASE: db_auth
       MYSQL_USER: auth
-      MYSQL_PASSWORD: auth_secret
+      MYSQL_PASSWORD: ${DB_AUTH_PASSWORD:?set DB_AUTH_PASSWORD in .env}
     volumes: [db_auth:/var/lib/mysql]
 
   db_pos:
     <<: *mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root_pos
+      MYSQL_ROOT_PASSWORD: ${DB_POS_ROOT_PASSWORD:?set DB_POS_ROOT_PASSWORD in .env}
       MYSQL_DATABASE: db_pos
       MYSQL_USER: pos
-      MYSQL_PASSWORD: pos_secret
+      MYSQL_PASSWORD: ${DB_POS_PASSWORD:?set DB_POS_PASSWORD in .env}
     volumes: [db_pos:/var/lib/mysql]
 
   db_finance:
     <<: *mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root_finance
+      MYSQL_ROOT_PASSWORD: ${DB_FINANCE_ROOT_PASSWORD:?set DB_FINANCE_ROOT_PASSWORD in .env}
       MYSQL_DATABASE: db_finance
       MYSQL_USER: finance
-      MYSQL_PASSWORD: finance_secret
+      MYSQL_PASSWORD: ${DB_FINANCE_PASSWORD:?set DB_FINANCE_PASSWORD in .env}
     volumes: [db_finance:/var/lib/mysql]
 
   # ---------- backend services (Laravel 13 on FrankenPHP) ----------
@@ -63,12 +66,18 @@ services:
     environment:
       <<: *service-env
       APP_NAME: auth-service
-      APP_KEY: base64:0p3WnQn2cS1C2tA0XxVb7mS0p9q5r3aYdH3nq6oQJtU=
+      APP_KEY: ${APP_KEY_AUTH:?set APP_KEY_AUTH in .env}
       DB_HOST: db_auth
       DB_DATABASE: db_auth
       DB_USERNAME: auth
-      DB_PASSWORD: auth_secret
-      JWT_SECRET: ${JWT_SECRET:-change-me-auth-service-jwt-secret-please-32+}
+      DB_PASSWORD: ${DB_AUTH_PASSWORD:?set DB_AUTH_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      # First superadmin, created once if the email does not exist yet. Leave empty to skip.
+      ADMIN_NAME: ${ADMIN_NAME:-Super Admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # Shared-password demo accounts (*@demo.test). Never enable on a reachable deployment.
+      SEED_DEMO_USERS: ${SEED_DEMO_USERS:-false}
       JWT_ACCESS_TTL: "900"
       JWT_REFRESH_TTL: "604800"
     depends_on:
@@ -87,11 +96,11 @@ services:
     environment:
       <<: *service-env
       APP_NAME: pos-service
-      APP_KEY: base64:mZ8m0mN7f9yD0q4B3cK6vT1rW2eX5uA8sJ9hG3lP0oQ=
+      APP_KEY: ${APP_KEY_POS:?set APP_KEY_POS in .env}
       DB_HOST: db_pos
       DB_DATABASE: db_pos
       DB_USERNAME: pos
-      DB_PASSWORD: pos_secret
+      DB_PASSWORD: ${DB_POS_PASSWORD:?set DB_POS_PASSWORD in .env}
       TAX_RATE: ${TAX_RATE:-0.11}
     depends_on:
       db_pos: { condition: service_healthy }
@@ -105,11 +114,11 @@ services:
     environment:
       <<: *service-env
       APP_NAME: finance-service
-      APP_KEY: base64:Qf3r8Jm1tZ4kV7nB2xC5yH0wL9pS6dE3aG8uK1oN4iM=
+      APP_KEY: ${APP_KEY_FINANCE:?set APP_KEY_FINANCE in .env}
       DB_HOST: db_finance
       DB_DATABASE: db_finance
       DB_USERNAME: finance
-      DB_PASSWORD: finance_secret
+      DB_PASSWORD: ${DB_FINANCE_PASSWORD:?set DB_FINANCE_PASSWORD in .env}
     depends_on:
       db_finance: { condition: service_healthy }
       auth-service: { condition: service_healthy }
