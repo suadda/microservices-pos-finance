@@ -10,27 +10,35 @@ database **MySQL 8.4** terpisah per service, dan **Nginx** sebagai API Gateway.
 Kebutuhan: Docker + Docker Compose v2.
 
 ```bash
-cp .env.example .env                # isi SEMUA secret (cara generate ada di dalam file)
 docker compose up -d --build        # seluruh stack: 3 service + 3 MySQL + frontend + gateway
 ```
 
-Tidak ada secret di repo. `docker-compose.yml` membaca `APP_KEY_*`, `JWT_SECRET`, `INTERNAL_API_KEY` dan password MySQL
-dari `.env` (di-gitignore); compose langsung berhenti dengan error bila ada yang kosong. Jangan pernah commit `.env`.
+Tidak ada secret di repo dan tidak perlu file `.env`. Service `secrets-init` jalan paling awal dan membuat `APP_KEY` tiap
+service, `JWT_SECRET`, `INTERNAL_API_KEY` serta password MySQL secara acak ke volume `secrets` (sekali, lalu dipakai ulang
+saat restart). Untuk memakai nilai sendiri, salin `.env.example` ke `.env` (di-gitignore) dan isi yang diperlukan.
 
 Buka **http://localhost:8080** (SPA + API). Saat container start, migrasi dan seeder dijalankan otomatis (idempoten).
 Port langsung ke service (untuk uji `/internal/*` dengan service key): `8001` auth, `8002` pos, `8003` finance.
+Service key bisa dilihat dengan `docker compose exec pos-service cat /run/secrets/internal_api_key`.
 Port gateway bisa diganti: `GATEWAY_PORT=9090 docker compose up -d`.
 
-Reset data: `docker compose down -v && docker compose up -d --build`.
+Reset data: `docker compose down -v && docker compose up -d --build` (secret ikut dibuat ulang).
 
-### Akun
+### Akun Login Testing
 
-Superadmin pertama dibuat dari `ADMIN_EMAIL` + `ADMIN_PASSWORD` (min. 12 karakter) di `.env`, hanya bila email itu belum
-ada. Setelah login pertama, ganti password lewat UI dan hapus `ADMIN_PASSWORD` dari `.env`. User lain dibuat dari menu Users.
+Semua akun memakai password: **`password123`**
 
-Akun demo `*@demo.test` (satu per role dan outlet, password bersama) **tidak** dibuat secara default. Untuk pengujian
-lokal saja, set `SEED_DEMO_USERS=true` di `.env` (dibutuhkan oleh `scripts/e2e-scenarios.sh`). Saat flag kembali
-`false`, akun demo yang sudah ada otomatis dinonaktifkan pada start berikutnya. Jangan aktifkan di server yang bisa diakses orang lain.
+| Role | Email | Outlet |
+|---|---|---|
+| superadmin | `superadmin@demo.test` | semua |
+| staff_finance | `staff.finance@demo.test` | semua |
+| manager_finance | `manager.finance@demo.test` | semua |
+| kasir | `kasir.bdg@demo.test`, `kasir.grt@demo.test`, `kasir.skb@demo.test`, `kasir.tsm@demo.test` | BDG / GRT / SKB / TSM |
+| supervisor_pos | `supervisor.bdg@demo.test`, `supervisor.grt@demo.test`, `supervisor.skb@demo.test`, `supervisor.tsm@demo.test` | BDG / GRT / SKB / TSM |
+
+> Akun ini hanya untuk pengujian. Pada deployment yang bisa diakses publik, set `SEED_DEMO_USERS=false` di `.env`:
+> akun demo yang sudah ada otomatis dinonaktifkan pada start berikutnya. Superadmin sendiri bisa dibuat dari
+> `ADMIN_EMAIL` + `ADMIN_PASSWORD` (min. 12 karakter, dibuat sekali bila email belum ada).
 
 Seeder produk: `PKT-100K` (100.000), `PKT-50K` (50.000), `PKT-200K` (200.000) untuk skenario S1, beberapa produk lain,
 dan `OLD-001` (nonaktif). Outlet: `1 BDG`, `2 GRT`, `3 SKB`, `4 TSM`. Karena rekonsiliasi bersifat satu baris per outlet per hari,
@@ -39,7 +47,7 @@ tersedia 4 outlet supaya S1, S2, S3, S5 bisa diuji di hari yang sama.
 ### Uji skenario otomatis (S1–S5)
 
 ```bash
-./scripts/e2e-scenarios.sh      # butuh curl + jq, SEED_DEMO_USERS=true, jalankan pada database baru
+./scripts/e2e-scenarios.sh      # butuh curl + jq, jalankan pada database baru
 ```
 
 Script ini menjalankan S1 (BDG), S2 (GRT — mematikan container Finance lewat `docker compose stop finance-service`),
