@@ -23,7 +23,6 @@ frontend/dist/
 .codex/
 .windsurf/
 .continue/
-.aider*
 CLAUDE.md
 AGENTS.md
 GEMINI.md
