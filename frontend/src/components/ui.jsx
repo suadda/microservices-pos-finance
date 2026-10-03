@@ -119,6 +119,7 @@ function formatMoney(value) {
  */
 export function MoneyInput({ value, onChange, ...rest }) {
   const [text, setText] = useState(() => formatMoney(value));
+  const [, rerender] = useState(0);
   const inputRef = useRef(null);
   const pendingCaret = useRef(null);
 
@@ -127,7 +128,8 @@ export function MoneyInput({ value, onChange, ...rest }) {
     if (parseMoney(text).value !== parseMoney(formatMoney(value)).value) setText(formatMoney(value));
   }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Restore the caret after reformatting so editing in the middle doesn't jump to the end.
+  // Restore the caret after every reformat so editing in the middle doesn't jump to the end.
+  // Runs on each render (not only when `text` changes) because rejected keystrokes leave `text` as is.
   useLayoutEffect(() => {
     if (pendingCaret.current === null || !inputRef.current) return;
     const el = inputRef.current;
@@ -139,21 +141,35 @@ export function MoneyInput({ value, onChange, ...rest }) {
     }
     el.setSelectionRange(pos, pos);
     pendingCaret.current = null;
-  }, [text]);
+  });
 
-  const handleChange = (e) => {
-    const raw = e.target.value;
-    const caret = e.target.selectionStart ?? raw.length;
+  const apply = (raw, caret) => {
     pendingCaret.current = raw.slice(0, caret).replace(/[^\d,]/g, '').length;
     const next = parseMoney(raw);
     setText(next.text);
     onChange(next.value);
+    rerender((n) => n + 1);
+  };
+
+  const handleChange = (e) => apply(e.target.value, e.target.selectionStart ?? e.target.value.length);
+
+  // "1500000.50" pasted from a spreadsheet/JS: a dot followed by 1-2 digits is a decimal point (grouping dots
+  // always have 3 digits), so convert it instead of silently dropping it (which would turn it into 150000050).
+  const handlePaste = (e) => {
+    const pasted = e.clipboardData.getData('text').trim().replace(/^Rp\s*/i, '');
+    if (!/^\d+\.\d{1,2}$/.test(pasted)) return;
+    e.preventDefault();
+    const el = e.target;
+    const insert = pasted.replace('.', ',');
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? start;
+    apply(el.value.slice(0, start) + insert + el.value.slice(end), start + insert.length);
   };
 
   return (
     <div className="money-input">
       <span className="money-prefix" aria-hidden="true">Rp</span>
-      <input ref={inputRef} type="text" inputMode="decimal" autoComplete="off" placeholder="0" {...rest} value={text} onChange={handleChange} />
+      <input ref={inputRef} type="text" inputMode="decimal" autoComplete="off" placeholder="0" {...rest} value={text} onChange={handleChange} onPaste={handlePaste} />
     </div>
   );
 }
