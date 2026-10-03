@@ -1,5 +1,5 @@
 // Small shared UI building blocks.
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 const BADGE_COLORS = {
   trx: { pending: 'gray', paid: 'green', void: 'dark' },
@@ -85,6 +85,92 @@ export function Field({ label, error, children, hint }) {
       {hint && <span className="field-hint">{hint}</span>}
       {error && <span className="field-error">{error}</span>}
     </label>
+  );
+}
+
+// ---- MoneyInput: shows "1.500.000,50" while typing, emits a plain decimal string ("1500000.50") ----
+
+const groupThousands = (digits) => digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+/** Raw user text -> { text: display string, value: canonical decimal string for the API }. */
+function parseMoney(raw) {
+  const cleaned = String(raw ?? '').replace(/[^\d,]/g, '');
+  const comma = cleaned.indexOf(',');
+  let int = comma < 0 ? cleaned : cleaned.slice(0, comma);
+  const dec = comma < 0 ? null : cleaned.slice(comma + 1).replace(/,/g, '').slice(0, 2);
+  int = int.replace(/^0+(?=\d)/, '');
+  if (int === '' && dec !== null) int = '0';
+  const text = groupThousands(int) + (dec !== null ? `,${dec}` : '');
+  const value = int === '' ? '' : int + (dec ? `.${dec}` : '');
+  return { text, value };
+}
+
+/** Canonical/API value ("15000.00") -> display text ("15.000"). */
+function formatMoney(value) {
+  if (value === null || value === undefined || value === '') return '';
+  const [int, dec = ''] = String(value).split('.');
+  const trimmed = dec.replace(/0+$/, '');
+  return parseMoney(trimmed ? `${int},${trimmed}` : int).text;
+}
+
+/**
+ * Currency input with thousand separators (id-ID: "." thousands, "," decimals).
+ * `value` / `onChange` use plain decimal strings, so API payloads and math helpers are unchanged.
+ */
+export function MoneyInput({ value, onChange, ...rest }) {
+  const [text, setText] = useState(() => formatMoney(value));
+  const inputRef = useRef(null);
+  const pendingCaret = useRef(null);
+
+  // Keep in sync when the parent changes the value externally (e.g. form reset, prefill).
+  useEffect(() => {
+    if (parseMoney(text).value !== parseMoney(formatMoney(value)).value) setText(formatMoney(value));
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Restore the caret after reformatting so editing in the middle doesn't jump to the end.
+  useLayoutEffect(() => {
+    if (pendingCaret.current === null || !inputRef.current) return;
+    const el = inputRef.current;
+    let seen = 0;
+    let pos = 0;
+    while (pos < text.length && seen < pendingCaret.current) {
+      if (/[\d,]/.test(text[pos])) seen += 1;
+      pos += 1;
+    }
+    el.setSelectionRange(pos, pos);
+    pendingCaret.current = null;
+  }, [text]);
+
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    const caret = e.target.selectionStart ?? raw.length;
+    pendingCaret.current = raw.slice(0, caret).replace(/[^\d,]/g, '').length;
+    const next = parseMoney(raw);
+    setText(next.text);
+    onChange(next.value);
+  };
+
+  return (
+    <div className="money-input">
+      <span className="money-prefix" aria-hidden="true">Rp</span>
+      <input ref={inputRef} type="text" inputMode="decimal" autoComplete="off" placeholder="0" {...rest} value={text} onChange={handleChange} />
+    </div>
+  );
+}
+
+/** Uniform Edit + Aktifkan/Nonaktifkan buttons for table rows (fixed columns so every row lines up). */
+export function RowActions({ onEdit, active, onToggle, busy, canToggle = true }) {
+  return (
+    <div className="row-actions">
+      <button className="btn btn-sm" onClick={onEdit}>Edit</button>
+      {canToggle ? (
+        <button className={`btn btn-sm ${active ? 'btn-danger-outline' : 'btn-success-outline'}`} disabled={busy} onClick={onToggle}>
+          {active ? 'Nonaktifkan' : 'Aktifkan'}
+        </button>
+      ) : (
+        <span aria-hidden="true" />
+      )}
+    </div>
   );
 }
 

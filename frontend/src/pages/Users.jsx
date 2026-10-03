@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { authApi } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { ROLES, ROLE_LABELS } from '../auth/access';
-import { Badge, Empty, ErrorAlert, Field, Loading, Modal, PageHeader, Pagination } from '../components/ui';
+import { Badge, Empty, ErrorAlert, Field, Loading, Modal, PageHeader, Pagination, RowActions } from '../components/ui';
 import { useAction, useApi } from '../lib/useApi';
 import { OutletSelect, useOutlets } from '../lib/useOutlets';
 
@@ -53,7 +53,7 @@ export default function Users() {
                 <th>Role</th>
                 <th>Outlet</th>
                 <th>Status</th>
-                <th />
+                <th className="actions-col" />
               </tr>
             </thead>
             <tbody>
@@ -65,13 +65,13 @@ export default function Users() {
                   <td>{u.outlet_id ? nameOf(u.outlet_id) : <span className="muted">Semua outlet</span>}</td>
                   <td><Badge kind="active" value={u.is_active} label={u.is_active ? 'Aktif' : 'Nonaktif'} /></td>
                   <td className="actions">
-                    <button className="btn btn-sm" onClick={() => setEditing(u)}>Edit</button>
-                    {u.id !== me.id &&
-                      (u.is_active ? (
-                        <button className="btn btn-sm btn-danger-outline" disabled={toggle.busy} onClick={() => setActive(u, false)}>Nonaktifkan</button>
-                      ) : (
-                        <button className="btn btn-sm" disabled={toggle.busy} onClick={() => setActive(u, true)}>Aktifkan</button>
-                      ))}
+                    <RowActions
+                      onEdit={() => setEditing(u)}
+                      active={u.is_active}
+                      canToggle={u.id !== me.id}
+                      busy={toggle.busy}
+                      onToggle={() => setActive(u, !u.is_active)}
+                    />
                   </td>
                 </tr>
               ))}

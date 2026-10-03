@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { posApi } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
-import { Alert, Badge, Empty, ErrorAlert, Field, Loading, Modal, PageHeader, Stat } from '../components/ui';
+import { Alert, Badge, Empty, ErrorAlert, Field, Loading, Modal, MoneyInput, PageHeader, Stat } from '../components/ui';
 import { METHOD_LABELS, dateTime, isNonZero, rupiah, shortDate } from '../lib/format';
 import { TAX_RATE, previewTotals, subtractMoney } from '../lib/money';
 import { useAction, useApi } from '../lib/useApi';
@@ -23,7 +23,11 @@ export default function Cashier() {
       {current.data ? (
         <SalesScreen summary={current.data} reloadSummary={current.reload} onClosed={(r) => { setClosedResult(r); current.reload(); }} />
       ) : (
-        !current.error && <OpenShiftForm onOpened={current.reload} />
+        !current.error && (
+          <div className="center-stage">
+            <OpenShiftForm onOpened={current.reload} />
+          </div>
+        )
       )}
     </>
   );
@@ -48,9 +52,9 @@ function OpenShiftForm({ onOpened }) {
   };
 
   return (
-    <form className="card narrow" onSubmit={submit}>
+    <form className="card narrow open-shift" onSubmit={submit}>
       <h2>Buka Shift</h2>
-      <p className="muted">Belum ada shift terbuka. Masukkan modal kas awal untuk mulai berjualan.</p>
+      <p className="muted lead">Belum ada shift terbuka. Masukkan modal kas awal untuk mulai berjualan.</p>
       <ErrorAlert error={error} />
       {!user.outlet_id && (
         <Field label="Outlet" hint="Akun Anda tidak terikat outlet, pilih outlet shift ini.">
@@ -58,9 +62,9 @@ function OpenShiftForm({ onOpened }) {
         </Field>
       )}
       <Field label="Modal kas awal (opening cash)" error={error?.fields?.opening_cash}>
-        <input type="number" min="0" step="0.01" value={openingCash} onChange={(e) => setOpeningCash(e.target.value)} required autoFocus />
+        <MoneyInput value={openingCash} onChange={setOpeningCash} required autoFocus />
       </Field>
-      <button className="btn btn-primary" disabled={busy}>
+      <button className="btn btn-primary btn-block" disabled={busy}>
         {busy ? 'Membuka…' : 'Buka Shift'}
       </button>
     </form>
@@ -161,7 +165,7 @@ function SalesScreen({ summary, reloadSummary, onClosed }) {
             </table>
           )}
           <Field label="Diskon (nominal)">
-            <input type="number" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} />
+            <MoneyInput value={discount} onChange={setDiscount} />
           </Field>
           <dl className="totals">
             <dt>Subtotal</dt>
@@ -339,7 +343,7 @@ function PaymentModal({ trx, onClose, onPaid }) {
         {cash ? (
           <>
             <Field label="Uang diterima" error={error?.fields?.paid_amount}>
-              <input type="number" min="0" step="0.01" value={paid} onChange={(e) => setPaid(e.target.value)} required autoFocus />
+              <MoneyInput value={paid} onChange={setPaid} required autoFocus />
             </Field>
             <div className={`change ${Number(change) < 0 ? 'negative' : ''}`}>
               Kembalian: <strong>{change === null ? '-' : Number(change) < 0 ? 'Uang kurang' : rupiah(change)}</strong>
@@ -416,7 +420,7 @@ function CloseShiftModal({ shift, summary, onClose, onClosed }) {
           <dd className="grand">{rupiah(summary.expected_cash)}</dd>
         </dl>
         <Field label="Kas fisik dihitung (actual cash)" error={error?.fields?.actual_cash}>
-          <input type="number" min="0" step="0.01" value={actual} onChange={(e) => setActual(e.target.value)} required autoFocus />
+          <MoneyInput value={actual} onChange={setActual} required autoFocus />
         </Field>
         {variance !== null && (
           <div className={`change ${isNonZero(variance) ? 'negative' : ''}`}>

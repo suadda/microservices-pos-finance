@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { posApi } from '../api/client';
-import { Badge, Empty, ErrorAlert, Field, Loading, Modal, PageHeader, Pagination } from '../components/ui';
+import { Badge, Empty, ErrorAlert, Field, Loading, Modal, MoneyInput, PageHeader, Pagination, RowActions } from '../components/ui';
 import { rupiah } from '../lib/format';
 import { useAction, useApi } from '../lib/useApi';
 
@@ -51,7 +51,7 @@ export default function Products() {
                 <th>Nama</th>
                 <th className="num">Harga</th>
                 <th>Status</th>
-                <th />
+                <th className="actions-col" />
               </tr>
             </thead>
             <tbody>
@@ -62,12 +62,7 @@ export default function Products() {
                   <td className="num">{rupiah(p.price)}</td>
                   <td><Badge kind="active" value={p.is_active} label={p.is_active ? 'Aktif' : 'Nonaktif'} /></td>
                   <td className="actions">
-                    <button className="btn btn-sm" onClick={() => setEditing(p)}>Edit</button>
-                    {p.is_active ? (
-                      <button className="btn btn-sm btn-danger-outline" disabled={toggle.busy} onClick={() => setActive(p, false)}>Nonaktifkan</button>
-                    ) : (
-                      <button className="btn btn-sm" disabled={toggle.busy} onClick={() => setActive(p, true)}>Aktifkan</button>
-                    )}
+                    <RowActions onEdit={() => setEditing(p)} active={p.is_active} busy={toggle.busy} onToggle={() => setActive(p, !p.is_active)} />
                   </td>
                 </tr>
               ))}
@@ -114,7 +109,7 @@ function ProductForm({ product, onClose, onSaved }) {
           <input value={form.name} onChange={set('name')} required maxLength={200} />
         </Field>
         <Field label="Harga jual" error={error?.fields?.price}>
-          <input type="number" min="0" step="0.01" value={form.price} onChange={set('price')} required />
+          <MoneyInput value={form.price} onChange={(v) => setForm((f) => ({ ...f, price: v }))} required />
         </Field>
         <label className="checkbox">
           <input type="checkbox" checked={form.is_active} onChange={set('is_active')} /> Aktif (dapat dijual)
