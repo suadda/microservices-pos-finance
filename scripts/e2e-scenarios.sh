@@ -93,7 +93,7 @@ run_s1_flow() {
   STAFF=$(login "staff.finance@demo.test")
 
   local p100 p50 p200
-  p100=$(product_id PKT-100K "$KASIR"); p50=$(product_id PKT-50K "$KASIR"); p200=$(product_id PKT-200K "$KASIR")
+  p100=$(product_id CAT-5KG "$KASIR"); p50=$(product_id SMN-40KG "$KASIR"); p200=$(product_id PIPA-PVC4 "$KASIR")
 
   call POST "$API/pos/shifts/open" "$KASIR" '{"opening_cash":200000}'
   check "open shift" "$STATUS" 201
@@ -210,20 +210,20 @@ call POST "$API/pos/shifts/open" "$KASIR" '{"opening_cash":100000}'
 SHIFT_ID=$(j .data.id)
 call POST "$API/pos/shifts/open" "$KASIR" '{"opening_cash":100000}'
 check "second open shift" "$STATUS" 409
-KOPI=$(product_id KOP-001 "$KASIR")
+PAKU=$(product_id PAKU-5CM "$KASIR")
 # 10 simultaneous transaction creations must yield 10 distinct numbers.
 NUMBERS=$(seq 1 10 | xargs -P 10 -I{} curl -s --max-time 20 -X POST "$API/pos/transactions" \
   -H "Authorization: Bearer $KASIR" -H 'Content-Type: application/json' -H 'Accept: application/json' \
-  -d "{\"items\":[{\"product_id\":$KOPI,\"quantity\":1}]}" | jq -r '.data.trx_number')
+  -d "{\"items\":[{\"product_id\":$PAKU,\"quantity\":1}]}" | jq -r '.data.trx_number')
 check "10 concurrent trx numbers are unique" "$(sort -u <<<"$NUMBERS" | grep -c '^TRX/TSM/')" 10
 for id in $(curl -s -H "Authorization: Bearer $KASIR" "$API/pos/transactions?status=pending&per_page=50" | jq -r '.data[].id'); do
   call POST "$API/pos/transactions/$id/pay" "$KASIR" '{"payment_method":"qris","paid_amount":19980}'
 done
-call POST "$API/pos/transactions" "$KASIR" "{\"items\":[{\"product_id\":$KOPI,\"quantity\":1}],\"discount_amount\":999999}"
+call POST "$API/pos/transactions" "$KASIR" "{\"items\":[{\"product_id\":$PAKU,\"quantity\":1}],\"discount_amount\":999999}"
 check "discount above subtotal" "$STATUS" 422
 call POST "$API/pos/transactions" "$KASIR" "{\"items\":[{\"product_id\":$(product_id OLD-001 "$KASIR"),\"quantity\":1}]}"
 check "inactive product rejected" "$STATUS" 422
-TRX=$(create_trx "$KASIR" "$KOPI")
+TRX=$(create_trx "$KASIR" "$PAKU")
 call POST "$API/pos/transactions/$TRX/pay" "$KASIR" '{"payment_method":"debit","paid_amount":20000}'
 check "debit must be exact" "$STATUS" 422
 call POST "$API/pos/transactions/$TRX/void" "$SUPERVISOR" '{"reason":"pending"}'
