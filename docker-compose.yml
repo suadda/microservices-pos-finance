@@ -1,6 +1,7 @@
 # Whole stack with one command:  docker compose up -d --build
 #   http://localhost:8080          SPA + API gateway (/api/auth, /api/pos, /api/finance)
-#   http://localhost:8001/8002/8003 direct service ports (for testing /internal/* with X-Service-Key)
+#   http://localhost:8001/8002/8003 direct service ports (for testing /internal/* with X-Service-Key),
+#                                   bound to 127.0.0.1 only so they are not reachable from other machines
 #
 # No secrets live in this repo. `secrets-init` runs first and generates every secret (APP_KEYs, JWT secret,
 # service key, MySQL passwords) into the `secrets` volume, which the other containers mount read-only as
@@ -116,7 +117,7 @@ services:
     volumes: [*secrets-mount]
     depends_on:
       db_auth: { condition: service_healthy }
-    ports: ["8001:8000"]
+    ports: ["127.0.0.1:8001:8000"] # localhost only: direct access bypasses the gateway
     healthcheck: &http-health
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/health >/dev/null || exit 1"]
       interval: 5s
@@ -140,7 +141,7 @@ services:
     depends_on:
       db_pos: { condition: service_healthy }
       auth-service: { condition: service_healthy }
-    ports: ["8002:8000"]
+    ports: ["127.0.0.1:8002:8000"]
     healthcheck: *http-health
 
   finance-service:
@@ -158,7 +159,7 @@ services:
     depends_on:
       db_finance: { condition: service_healthy }
       auth-service: { condition: service_healthy }
-    ports: ["8003:8000"]
+    ports: ["127.0.0.1:8003:8000"]
     healthcheck: *http-health
 
   # ---------- frontend + gateway ----------
