@@ -11,9 +11,9 @@ export default function Layout() {
     <div className="app">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark" /> POS + Finance
+          <span className="brand-mark" aria-hidden="true" /> POS + Finance
         </div>
-        <nav>
+        <nav aria-label="Navigasi utama">
           {sections.map((section) => (
             <div key={section} className="nav-section">
               <div className="nav-title">{section}</div>
