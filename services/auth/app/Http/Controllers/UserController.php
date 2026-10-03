@@ -124,7 +124,10 @@ class UserController
         if ($self->id !== $target->id) {
             return;
         }
-        if (($changes['is_active'] ?? true) === false || (isset($changes['role']) && $changes['role'] !== 'superadmin')) {
+        // The `boolean` rule accepts false/0/"0"/"false"; normalise so none of them slips past the guard.
+        $deactivating = array_key_exists('is_active', $changes)
+            && filter_var($changes['is_active'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) === false;
+        if ($deactivating || (isset($changes['role']) && $changes['role'] !== 'superadmin')) {
             throw ApiException::conflict('SELF_LOCKOUT', 'Tidak dapat menonaktifkan atau menurunkan role akun sendiri');
         }
     }
