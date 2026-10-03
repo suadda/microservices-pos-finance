@@ -1,4 +1,3 @@
-/* Design tokens (ui-ux-pro-max: Swiss minimal, dense dashboard, status-driven color, light default). */
 :root {
   /* neutrals (slate) */
   --slate-50: #f8fafc;
@@ -107,6 +106,13 @@ code { background: var(--gray-bg); padding: 1px 6px; border-radius: 4px; font-si
   padding: 18px 20px; margin-bottom: 16px; box-shadow: var(--shadow-sm);
 }
 .card.narrow { max-width: 420px; }
+/* Centers a single card in the remaining page area (e.g. Buka Shift). */
+.center-stage { display: grid; place-items: center; min-height: calc(100vh - 160px); padding-bottom: 60px; }
+.center-stage > .card { width: 100%; margin-bottom: 0; }
+.open-shift { padding: 24px; }
+.open-shift h2 { font-size: 18px; text-align: center; margin-bottom: 6px; }
+.open-shift .lead { text-align: center; margin: 0 0 18px; }
+.open-shift .btn { min-height: 40px; }
 .card-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .card-title-row h2 { margin: 0; }
 
@@ -137,6 +143,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .btn-danger:hover:not(:disabled) { background: #b91c1c; border-color: #b91c1c; }
 .btn-danger-outline { color: var(--danger); border-color: #fecaca; }
 .btn-danger-outline:hover:not(:disabled) { background: var(--red-bg); border-color: #fca5a5; }
+.btn-success-outline { color: var(--green); border-color: #bbf7d0; }
+.btn-success-outline:hover:not(:disabled) { background: var(--green-bg); border-color: #86efac; }
 .btn-ghost { background: transparent; color: var(--nav-fg); border-color: var(--slate-700); justify-self: start; margin-top: 6px; }
 .btn-ghost:hover:not(:disabled) { background: var(--slate-700); color: #fff; border-color: var(--slate-600); }
 .btn-sm { padding: 4px 10px; font-size: 13px; min-height: 30px; }
@@ -151,6 +159,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .field-label { font-weight: 500; font-size: 13px; }
 .field-hint { font-size: 12px; color: var(--muted); }
 .field-error { font-size: 12px; color: var(--danger); }
+.money-input { position: relative; display: flex; align-items: center; width: 100%; }
+.money-input input { width: 100%; padding-left: 36px; font-variant-numeric: tabular-nums; }
+.money-prefix { position: absolute; left: 10px; color: var(--muted); font-size: 13px; font-weight: 500; pointer-events: none; }
 .checkbox { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
 .inline { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
 .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 14px; }
@@ -174,7 +185,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .table tfoot td { border-bottom: 0; }
 .table tr.grand td { font-weight: 700; border-top: 2px solid var(--border); }
-.table .actions { display: flex; gap: 6px; justify-content: flex-end; }
+.table td.actions { text-align: right; white-space: nowrap; width: 1%; }
+.table th.actions-col { width: 1%; }
+.row-actions { display: inline-grid; grid-template-columns: 64px 104px; gap: 6px; }
+.row-actions .btn { justify-content: center; width: 100%; padding-left: 0; padding-right: 0; }
 .table td.indent { padding-left: 32px; }
 .comparison .diff-bad { color: var(--danger); font-weight: 700; background: var(--red-bg); }
 .comparison .diff-ok { color: var(--green); }
