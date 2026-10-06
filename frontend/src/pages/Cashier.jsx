@@ -6,7 +6,7 @@ import {
   Alert, Badge, Empty, ErrorAlert, Field, Loading, Modal, MoneyInput, PageHeader, ProductThumb, SearchIcon, Stat, TrashIcon,
 } from '../components/ui';
 import { METHOD_LABELS, isNonZero, rupiah, shortDate, timeOnly } from '../lib/format';
-import { TAX_RATE, previewTotals, subtractMoney } from '../lib/money';
+import { TAX_RATE, addMoney, previewTotals, subtractMoney } from '../lib/money';
 import { useAction, useApi } from '../lib/useApi';
 import { OutletSelect, useOutlets } from '../lib/useOutlets';
 
@@ -540,28 +540,42 @@ function PaidNotice({ trx, onDismiss }) {
 
 function CloseShiftModal({ shift, summary, onClose, onClosed }) {
   const [actual, setActual] = useState('');
+  const [note, setNote] = useState('');
   const { busy, error, run } = useAction();
-  const variance = actual === '' ? null : subtractMoney(actual, summary.expected_cash);
+  const submitting = useRef(false);
 
-  const submit = (e) => {
+  const byMethod = summary.totals_by_method;
+  const cashTotal = byMethod.cash?.total ?? '0';
+  const nonCashTotal = addMoney(byMethod.debit?.total ?? '0', byMethod.qris?.total ?? '0');
+  const grandTotal = addMoney(cashTotal, nonCashTotal);
+  const variance = actual === '' ? null : subtractMoney(actual, summary.expected_cash);
+  const varianceTone = variance === null ? 'empty' : Number(variance) < 0 ? 'negative' : Number(variance) > 0 ? 'positive' : 'zero';
+
+  const submit = async (e) => {
     e.preventDefault();
-    run(async () => {
+    if (submitting.current || actual === '') return;
+    submitting.current = true;
+    // On error `run` keeps the modal open and the inputs (incl. the note) untouched.
+    await run(async () => {
       const res = await posApi(`/shifts/${shift.id}/close`, { method: 'POST', body: { actual_cash: actual } });
-      onClosed(res.data);
+      onClosed({ ...res.data, note: note.trim() });
     });
+    submitting.current = false;
   };
 
   return (
     <Modal
-      title={`Tutup Shift #${shift.id}`}
+      className="modal-close-shift"
+      title="Konfirmasi Tutup Shift"
+      subtitle={`Shift #${shift.id} - ${shift.outlet?.name || shift.outlet?.code || '-'}, ${shortDate(shift.business_date)}`}
       onClose={onClose}
       footer={
         <>
-          <button className="btn" type="button" onClick={onClose}>
+          <button className="btn btn-danger-outline" type="button" onClick={onClose}>
             Batal
           </button>
-          <button className="btn btn-danger" form="close-form" disabled={busy || actual === ''}>
-            {busy ? 'Menutup…' : 'Konfirmasi Tutup Shift'}
+          <button className="btn btn-success" form="close-form" disabled={busy || actual === ''} aria-busy={busy}>
+            {busy ? 'Menutup…' : 'Konfirmasi & Tutup Shift'}
           </button>
         </>
       }
@@ -570,22 +584,51 @@ function CloseShiftModal({ shift, summary, onClose, onClosed }) {
         {summary.pending_count > 0 && (
           <Alert type="warning">Masih ada {summary.pending_count} transaksi pending — selesaikan pembayaran sebelum menutup shift.</Alert>
         )}
-        <dl className="totals">
-          <dt>Modal awal</dt>
-          <dd>{rupiah(shift.opening_cash)}</dd>
-          <dt>Penjualan tunai</dt>
-          <dd>{rupiah(summary.totals_by_method.cash.total)}</dd>
-          <dt className="grand">Kas seharusnya</dt>
-          <dd className="grand">{rupiah(summary.expected_cash)}</dd>
-        </dl>
-        <Field label="Kas fisik dihitung (actual cash)" error={error?.fields?.actual_cash}>
+        <table className="table close-table">
+          <colgroup>
+            <col style={{ width: '60%' }} />
+            <col style={{ width: '40%' }} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col">Keterangan</th>
+              <th scope="col" className="num">Nominal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Total Penjualan Tunai</td>
+              <td className="num">{rupiah(cashTotal)}</td>
+            </tr>
+            <tr>
+              <td>Total Penjualan Non-Tunai</td>
+              <td className="num">{rupiah(nonCashTotal)}</td>
+            </tr>
+            <tr className="row-total">
+              <td>Total Keseluruhan</td>
+              <td className="num">{rupiah(grandTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <Field
+          label="Kas fisik dihitung (actual cash)"
+          error={error?.fields?.actual_cash}
+          hint={`Kas seharusnya ${rupiah(summary.expected_cash)} (modal awal ${rupiah(shift.opening_cash)} + penjualan tunai)`}
+        >
           <MoneyInput value={actual} onChange={setActual} required autoFocus />
         </Field>
-        {variance !== null && (
-          <div className={`change ${isNonZero(variance) ? 'negative' : ''}`}>
-            Selisih: <strong>{rupiah(variance)}</strong>
-          </div>
-        )}
+
+        <div className="field">
+          <span className="field-label" id="variance-label">Selisih Tunai</span>
+          <output className={`variance variance-${varianceTone}`} aria-labelledby="variance-label">
+            {variance === null ? '—' : `${Number(variance) > 0 ? '+' : ''}${rupiah(variance)}`}
+          </output>
+        </div>
+
+        <Field label="Catatan" hint="Catatan ditampilkan pada ringkasan penutupan shift.">
+          <textarea rows={3} placeholder="Tulis catatan di sini..." value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
+        </Field>
         <ErrorAlert error={error} />
       </form>
     </Modal>
@@ -601,8 +644,9 @@ function ClosedShiftNotice({ result, onDismiss }) {
           <strong>Shift #{shift.id} ditutup.</strong> Kas seharusnya {rupiah(shift.expected_cash)} · Kas fisik {rupiah(shift.actual_cash)} · Selisih{' '}
           <strong>{rupiah(shift.cash_variance)}</strong>
           {result.warning && <div className="small">{result.warning}</div>}
+          {result.note && <div className="small">Catatan: {result.note}</div>}
         </div>
-        <button className="icon-btn" onClick={onDismiss}>×</button>
+        <button className="icon-btn" onClick={onDismiss} aria-label="Tutup notifikasi">×</button>
       </div>
       <div className="stats small-stats">
         <Stat label="Transaksi" value={result.trx_count} />

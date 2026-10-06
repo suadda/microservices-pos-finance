@@ -126,7 +126,7 @@ export function Pagination({ meta, onPage }) {
   );
 }
 
-export function Modal({ title, onClose, children, footer }) {
+export function Modal({ title, subtitle, onClose, children, footer, className = '' }) {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -135,9 +135,12 @@ export function Modal({ title, onClose, children, footer }) {
 
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
+      <div className={`modal ${className}`} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>{title}</h3>
+          <div className="modal-titles">
+            <h3>{title}</h3>
+            {subtitle && <p className="modal-subtitle">{subtitle}</p>}
+          </div>
           <button className="icon-btn" onClick={onClose} aria-label="Tutup">
             ×
           </button>
