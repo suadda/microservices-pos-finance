@@ -92,9 +92,27 @@ code { background: var(--gray-bg); padding: 1px 6px; border-radius: 4px; font-si
   content: ''; position: absolute; left: -12px; top: 6px; bottom: 6px; width: 3px; border-radius: 0 3px 3px 0; background: #60a5fa;
 }
 .nav-link:focus-visible { outline-color: #60a5fa; }
-.sidebar-user { padding: 14px 16px; margin: 12px; border-radius: var(--radius); background: var(--nav-hover); display: grid; gap: 4px; }
-.sidebar-user .muted { color: var(--slate-400); }
-.user-name { color: #fff; font-weight: 600; }
+/* Profile card: vertical + centered, vibrant gradient (white text on #2563eb/#6d28d9 >= 5:1 contrast). */
+.sidebar-user {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px;
+  padding: 18px 16px 16px; margin: 12px; border-radius: var(--radius-lg); color: #fff; position: relative; overflow: hidden;
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 55%, #6d28d9 100%);
+  box-shadow: 0 10px 30px rgb(79 70 229 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.2);
+}
+.sidebar-user::before {
+  content: ''; position: absolute; inset: -40% -20% auto auto; width: 140px; height: 140px; border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.22), transparent 70%); pointer-events: none;
+}
+.user-avatar {
+  width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 6px;
+  background: #fff; color: #1e3a8a; font-weight: 800; font-size: 16px; letter-spacing: 0.02em;
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.35), 0 6px 16px rgb(15 23 42 / 0.3);
+}
+.user-name { color: #fff; font-weight: 700; font-size: 15px; line-height: 1.3; }
+.user-meta { color: #f1f5ff; font-size: 12px; }
+.user-logout { margin-top: 10px; background: #fff; color: #1e3a8a; border-color: #fff; font-weight: 600; justify-content: center; min-width: 110px; }
+.user-logout:hover:not(:disabled) { background: #e0e7ff; border-color: #e0e7ff; color: #1e3a8a; }
+.user-logout:focus-visible { outline-color: #fff; }
 .content { flex: 1; padding: 28px 32px; min-width: 0; max-width: 1440px; }
 
 .page-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
