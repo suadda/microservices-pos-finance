@@ -10,6 +10,74 @@ const BADGE_COLORS = {
   active: { true: 'green', false: 'gray' },
 };
 
+// ---- Inline icons (no icon dependency) ----
+const svgProps = {
+  width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+  strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true, focusable: false,
+};
+export const SearchIcon = () => (
+  <svg {...svgProps}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+);
+export const EditIcon = () => (
+  <svg {...svgProps}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+);
+
+/** Product image with a stable initials placeholder (never renders a broken image). */
+export function ProductThumb({ name, src, size = 'md' }) {
+  const [failed, setFailed] = useState(false);
+  const initials = String(name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  return (
+    <span className={`thumb thumb-${size}`} aria-hidden="true">
+      {src && !failed ? <img src={src} alt="" onError={() => setFailed(true)} /> : initials}
+    </span>
+  );
+}
+
+/** Accessible on/off switch. */
+export function Switch({ checked, onChange, disabled, label }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      className={`switch ${checked ? 'on' : ''}`}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+    >
+      <span className="switch-knob" />
+    </button>
+  );
+}
+
+/** Numbered pagination: first / prev / pages / next / last, total on the right. */
+export function PageNav({ meta, onPage, unit = 'data' }) {
+  if (!meta) return null;
+  const { page, last_page: last, total } = meta;
+  const from = Math.max(1, Math.min(page - 2, last - 4));
+  const pages = Array.from({ length: Math.min(5, last) }, (_, i) => from + i);
+  return (
+    <div className="page-nav">
+      {last > 1 ? (
+        <nav className="page-nav-buttons" aria-label="Halaman">
+          <button className="page-btn" disabled={page <= 1} onClick={() => onPage(1)} aria-label="Halaman pertama">«</button>
+          <button className="page-btn" disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label="Halaman sebelumnya">‹</button>
+          {pages.map((p) => (
+            <button key={p} className={`page-btn ${p === page ? 'active' : ''}`} aria-current={p === page ? 'page' : undefined} onClick={() => onPage(p)}>
+              {p}
+            </button>
+          ))}
+          <button className="page-btn" disabled={page >= last} onClick={() => onPage(page + 1)} aria-label="Halaman berikutnya">›</button>
+          <button className="page-btn" disabled={page >= last} onClick={() => onPage(last)} aria-label="Halaman terakhir">»</button>
+        </nav>
+      ) : (
+        <span />
+      )}
+      <span className="page-nav-total">Total {total} {unit}</span>
+    </div>
+  );
+}
+
 export function Badge({ kind, value, label }) {
   const color = BADGE_COLORS[kind]?.[String(value)] || 'gray';
   return <span className={`badge badge-${color}`}>{label ?? String(value ?? '-')}</span>;
