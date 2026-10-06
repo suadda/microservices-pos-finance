@@ -71,7 +71,7 @@ Semua akun memakai password: **`password123`**
 | Data    | Isi                                                                                                                  |
 |---------|----------------------------------------------------------------------------------------------------------------------|
 | Outlet  | `1 BDG` Bandung, `2 GRT` Garut, `3 SKB` Sukabumi, `4 TSM` Tasikmalaya                                                |
-| Produk  | `PKT-100K` (100.000), `PKT-50K` (50.000), `PKT-200K` (200.000) untuk skenario S1, `KOP-001`, `TEH-001`, `ROT-001`, `AIR-600`, `MIE-001`, dan `OLD-001` (nonaktif) |
+| Produk  | Bahan bangunan `SMN-001`, `BTA-001`, `PSR-001`, `BJK-008`, `CAT-005`, `KRM-040`, `PKU-005`, `PLY-012` (nonaktif), `PVC-003`; untuk skenario e2e: `CAT-5KG` (100.000), `SMN-40KG` (50.000), `PIPA-PVC4` (200.000) untuk S1, `PAKU-5CM`, dan `OLD-001` (nonaktif) |
 | Akun    | 1 akun per role (tabel di atas), kasir dan supervisor per outlet                                                     |
 | Finance | Chart of accounts `1101`, `1102`, `1103`, `2101`, `4101`                                                             |
 

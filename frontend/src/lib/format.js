@@ -16,6 +16,12 @@ export function dateTime(value) {
   return new Date(value).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' });
 }
 
+/** "2026-10-04T08:15:00+07:00" -> "08.15" (Asia/Jakarta). */
+export function timeOnly(value) {
+  if (!value) return '-';
+  return new Date(value).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
+}
+
 export function shortDate(value) {
   if (!value) return '-';
   return new Date(`${value}T00:00:00+07:00`).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: 'short', year: 'numeric' });

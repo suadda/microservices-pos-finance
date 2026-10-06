@@ -18,6 +18,10 @@ export function previewTotals(lines, discount) {
   };
 }
 
+export function addMoney(...values) {
+  return fromCents(values.reduce((sum, v) => sum + toCents(v), 0));
+}
+
 export function subtractMoney(a, b) {
   return fromCents(toCents(a) - toCents(b));
 }

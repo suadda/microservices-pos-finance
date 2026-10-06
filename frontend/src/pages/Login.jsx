@@ -39,9 +39,9 @@ const EyeIcon = ({ off }) => (
   </svg>
 );
 
-function Brand({ className = '' }) {
+function Brand() {
   return (
-    <div className={`lg-brand ${className}`}>
+    <div className="lg-brand">
       <span className="lg-logo" aria-hidden="true">
         A
       </span>
@@ -76,18 +76,9 @@ export default function Login() {
 
   return (
     <div className="lg-page">
-      <aside className="lg-aside">
-        <Brand />
-
-        <div className="lg-pitch">
-          <h2>Kasir dan keuangan dalam satu sistem.</h2>
-          <p>Catat transaksi, pantau arus kas, dan tutup buku tanpa pindah aplikasi.</p>
-        </div>
-      </aside>
-
       <main className="lg-main">
         <form className="lg-card" onSubmit={submit} noValidate={false}>
-          <Brand className="lg-brand-mobile" />
+          <Brand />
 
           <header className="lg-head">
             <h1>Masuk ke akun Anda</h1>

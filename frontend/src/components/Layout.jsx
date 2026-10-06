@@ -2,6 +2,15 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { MENU, ROLE_LABELS, can } from '../auth/access';
 
+const initials = (name) =>
+  String(name || '?')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+
 export default function Layout() {
   const { user, logout } = useAuth();
   const items = MENU.filter((m) => can(user, m.permission));
@@ -28,12 +37,15 @@ export default function Layout() {
           ))}
         </nav>
         <div className="sidebar-user">
+          <span className="user-avatar" aria-hidden="true">
+            {initials(user.name)}
+          </span>
           <div className="user-name">{user.name}</div>
-          <div className="muted small">
+          <div className="user-meta">
             {ROLE_LABELS[user.role]}
-            {user.outlet_id ? ` · Outlet #${user.outlet_id}` : ''}
+            {user.outlet_id ? ` - Outlet #${user.outlet_id}` : ''}
           </div>
-          <button className="btn btn-sm btn-ghost" onClick={logout}>
+          <button className="btn btn-sm user-logout" onClick={logout}>
             Keluar
           </button>
         </div>
