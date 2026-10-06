@@ -25,24 +25,25 @@ class DatabaseSeeder extends Seeder
             }
         });
 
-        // test scenario S1 exactly; PAKU-5CM is the cheap item used by the e2e discount/parallel checks.
         $products = [
+            // Building-material catalogue (category is derived from the SKU prefix in the frontend).
+            ['sku' => 'SMN-001', 'name' => 'Semen Portland 50 Kg', 'price' => '68000.00'],
+            ['sku' => 'BTA-001', 'name' => 'Bata Merah Press', 'price' => '1200.00'],
+            ['sku' => 'PSR-001', 'name' => 'Pasir Pasang', 'price' => '250000.00'],
+            ['sku' => 'BJK-008', 'name' => 'Besi Beton 8 mm', 'price' => '55000.00'],
+            ['sku' => 'CAT-005', 'name' => 'Cat Tembok Putih 5 Kg', 'price' => '95000.00'],
+            ['sku' => 'KRM-040', 'name' => 'Keramik Lantai 40×40 cm', 'price' => '62000.00'],
+            ['sku' => 'PKU-005', 'name' => 'Paku Beton 5 cm', 'price' => '28000.00'],
+            ['sku' => 'PLY-012', 'name' => 'Plywood 12 mm', 'price' => '165000.00', 'is_active' => false],
+            ['sku' => 'PVC-003', 'name' => 'Pipa PVC 3 Inch', 'price' => '85000.00'],
+
+            // Required by scripts/e2e-scenarios.sh — keep SKU and price unchanged:
+            // test scenario S1 exactly (100k/50k/200k); PAKU-5CM is the cheap item for the discount/parallel checks;
+            // OLD-001 is the inactive product that must be rejected at checkout.
             ['sku' => 'CAT-5KG', 'name' => 'Cat Tembok Interior 5 kg', 'price' => '100000.00'],
             ['sku' => 'SMN-40KG', 'name' => 'Semen Portland 40 kg', 'price' => '50000.00'],
             ['sku' => 'PIPA-PVC4', 'name' => 'Pipa PVC 4 inch 4 m', 'price' => '200000.00'],
             ['sku' => 'PAKU-5CM', 'name' => 'Paku 5 cm (1 kg)', 'price' => '25000.00'],
-            ['sku' => 'BESI-10', 'name' => 'Besi Beton 10 mm (12 m)', 'price' => '85000.00'],
-            ['sku' => 'KRMK-4040', 'name' => 'Keramik Lantai 40x40 (per dus)', 'price' => '65000.00'],
-            ['sku' => 'BATA-RGN', 'name' => 'Bata Ringan 10 cm (per pcs)', 'price' => '9500.00'],
-            ['sku' => 'TRPK-9', 'name' => 'Triplek 9 mm 122x244', 'price' => '95000.00'],
-            ['sku' => 'PSR-KRG', 'name' => 'Pasir Cor (per karung)', 'price' => '18000.00'],
-            ['sku' => 'SMN-INS25', 'name' => 'Semen Instan Perekat Keramik 25 kg', 'price' => '95000.00'],
-            ['sku' => 'GYP-9MM', 'name' => 'Gypsum 9 mm 120x240', 'price' => '75000.00'],
-            ['sku' => 'KBL-NYA15', 'name' => 'Kabel NYA 1,5 mm (roll 50 m)', 'price' => '380000.00'],
-            ['sku' => 'KRAN-12', 'name' => 'Kran Air 1/2 inch', 'price' => '35000.00'],
-            ['sku' => 'ENGSL-4', 'name' => 'Engsel Pintu Stainless 4 inch', 'price' => '28000.00'],
-            ['sku' => 'LEM-PVC', 'name' => 'Lem Pipa PVC 100 g', 'price' => '15000.00'],
-            ['sku' => 'KUAS-3', 'name' => 'Kuas Cat 3 inch', 'price' => '12000.00'],
             ['sku' => 'OLD-001', 'name' => 'Produk Lama (nonaktif)', 'price' => '12000.00', 'is_active' => false],
         ];
         foreach ($products as $product) {
