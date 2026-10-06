@@ -8,6 +8,7 @@ const BADGE_COLORS = {
   shift: { open: 'green', closed: 'gray' },
   entry: { sale: 'green', reversal: 'red' },
   active: { true: 'green', false: 'gray' },
+  trxShift: { paid: 'green', pending: 'yellow', void: 'red' },
 };
 
 // ---- Inline icons (no icon dependency) ----
@@ -20,6 +21,9 @@ export const SearchIcon = () => (
 );
 export const EditIcon = () => (
   <svg {...svgProps}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+);
+export const TrashIcon = () => (
+  <svg {...svgProps}><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /></svg>
 );
 
 /** Product image with a stable initials placeholder (never renders a broken image). */
